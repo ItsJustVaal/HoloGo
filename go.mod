@@ -8,3 +8,8 @@ require (
 	github.com/google/uuid v1.4.0
 	github.com/joho/godotenv v1.5.1
 )
+
+require (
+	github.com/gocarina/gocsv v0.0.0-20231116093920-b87c2d0e983a // indirect
+	github.com/lib/pq v1.10.9 // indirect
+)

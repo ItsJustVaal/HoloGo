@@ -7,13 +7,11 @@ import (
 )
 
 func handleGetReadiness(w http.ResponseWriter, r *http.Request) {
-	respondWithJSON(w, http.StatusOK, models.JsonResponse{
+	models.RespondWithJSON(w, http.StatusOK, models.JsonResponse{
 		Status: "ok",
 	})
 }
 
 func handleGetErr(w http.ResponseWriter, r *http.Request) {
-	respondWithError(w, http.StatusInternalServerError, "Internal Server Error")
+	models.RespondWithError(w, http.StatusInternalServerError, "Internal Server Error")
 }
-
-func addChannelsToDB() {}

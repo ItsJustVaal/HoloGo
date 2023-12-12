@@ -1,20 +1,18 @@
-package main
+package models
 
 import (
 	"encoding/json"
 	"log"
 	"net/http"
-
-	"github.com/ItsJustVaal/HoloGo/internal/models"
 )
 
-func respondWithError(w http.ResponseWriter, code int, msg string) {
-	respondWithJSON(w, code, models.JsonErrorResponse{
+func RespondWithError(w http.ResponseWriter, code int, msg string) {
+	RespondWithJSON(w, code, JsonErrorResponse{
 		Error: msg,
 	})
 }
 
-func respondWithJSON(w http.ResponseWriter, statusCode int, response interface{}) {
+func RespondWithJSON(w http.ResponseWriter, statusCode int, response interface{}) {
 	w.Header().Set("Content-Type", "applcation/json")
 	data, err := json.Marshal(response)
 	if err != nil {

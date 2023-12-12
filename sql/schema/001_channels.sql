@@ -2,7 +2,7 @@
 CREATE TABLE channels (
     id UUID PRIMARY KEY,
     created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP,
     Channel TEXT NOT NULL,
     ChannelID TEXT NOT NULL,
     Region TEXT NOT NULL,

@@ -14,7 +14,7 @@ import (
 type Channel struct {
 	ID        uuid.UUID
 	CreatedAt time.Time
-	UpdatedAt time.Time
+	UpdatedAt sql.NullTime
 	Channel   string
 	Channelid string
 	Region    string

@@ -14,7 +14,7 @@ import (
 )
 
 const createChannel = `-- name: CreateChannel :one
-INSERT INTO channels (id, created_at, updated_at, Channel, ChannelID, Region, Prio, Oshi, Gen, Tags, Company)
+INSERT INTO channels (id, created_at, updated_at, channel, channelid, region, prio, oshi, gen, tags, company)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING id, created_at, updated_at, channel, channelid, region, prio, oshi, gen, tags, company
 `
@@ -22,7 +22,7 @@ RETURNING id, created_at, updated_at, channel, channelid, region, prio, oshi, ge
 type CreateChannelParams struct {
 	ID        uuid.UUID
 	CreatedAt time.Time
-	UpdatedAt time.Time
+	UpdatedAt sql.NullTime
 	Channel   string
 	Channelid string
 	Region    string
@@ -66,7 +66,7 @@ func (q *Queries) CreateChannel(ctx context.Context, arg CreateChannelParams) (C
 
 const getChannel = `-- name: GetChannel :one
 SELECT id, created_at, updated_at, channel, channelid, region, prio, oshi, gen, tags, company FROM channels
-WHERE ChannelID = $1
+WHERE channelid = $1
 `
 
 func (q *Queries) GetChannel(ctx context.Context, channelid string) (Channel, error) {
@@ -86,4 +86,31 @@ func (q *Queries) GetChannel(ctx context.Context, channelid string) (Channel, er
 		&i.Company,
 	)
 	return i, err
+}
+
+const getChannelIDs = `-- name: GetChannelIDs :many
+SELECT channelid FROM channels
+`
+
+func (q *Queries) GetChannelIDs(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getChannelIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var channelid string
+		if err := rows.Scan(&channelid); err != nil {
+			return nil, err
+		}
+		items = append(items, channelid)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

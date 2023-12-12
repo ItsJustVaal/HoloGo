@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 
+	_ "github.com/lib/pq"
+
 	"github.com/ItsJustVaal/HoloGo/internal/database"
 	"github.com/ItsJustVaal/HoloGo/internal/models"
 	"github.com/go-chi/chi"
@@ -24,7 +26,7 @@ func main() {
 
 	queries := database.New(db)
 
-	apiConfig := models.ApiConfig{
+	cfg := models.ApiConfig{
 		DB: queries,
 	}
 
@@ -41,6 +43,7 @@ func main() {
 	v1Router := chi.NewRouter()
 	v1Router.Get("/readiness", handleGetReadiness)
 	v1Router.Get("/err", handleGetErr)
+	v1Router.Get("/ch", cfg.AddChannelsToDB)
 
 	mainRouter.Mount("/v1", v1Router)
 
