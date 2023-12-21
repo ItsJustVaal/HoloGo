@@ -7,7 +7,7 @@ import (
 	"github.com/ItsJustVaal/HoloGo/internal/database"
 )
 
-// func startScraping(db *database.Queries, concurrency int, timeBetweenRequest time.Duration) {
+// func startAPICalls(db *database.Queries, concurrency int, timeBetweenRequest time.Duration) {
 // 	log.Printf("Collecting videos every %s on %v goroutines...", timeBetweenRequest, concurrency)
 // 	ticker := time.NewTicker(timeBetweenRequest)
 
