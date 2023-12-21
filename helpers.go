@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/ItsJustVaal/HoloGo/internal/database"
@@ -38,7 +39,8 @@ func AddChannelsToDB(db database.Queries) {
 	if err := gocsv.UnmarshalFile(channelsFile, &channels); err != nil {
 		fmt.Println(err.Error())
 	}
-
+	errSlice := make([]string, 0)
+	uniqueCheck := 0
 	for _, channel := range channels {
 		_, err := db.CreateChannel(context.Background(), database.CreateChannelParams{
 			ID:        uuid.New(),
@@ -54,8 +56,14 @@ func AddChannelsToDB(db database.Queries) {
 			Company:   sql.NullString{String: channel.Company, Valid: true},
 		})
 		if err != nil {
-			log.Fatalln("Failed to create channel")
+			uniqueCheck++
+			if !slices.Contains(errSlice, err.Error()) {
+				errSlice = append(errSlice, err.Error())
+			}
 		}
 	}
-	log.Println("Created Channels")
+	log.Printf("Num of Channels Added: %d, Num of Duplicates: %d\n", len(channels)-uniqueCheck, uniqueCheck)
+	if len(errSlice) != 0 {
+		log.Printf("List of errors: %v\n", errSlice)
+	}
 }

@@ -9,7 +9,6 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/ItsJustVaal/HoloGo/internal/database"
-	"github.com/ItsJustVaal/HoloGo/internal/models"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
@@ -26,9 +25,9 @@ func main() {
 
 	queries := database.New(db)
 
-	cfg := models.ApiConfig{
-		DB: queries,
-	}
+	// cfg := models.ApiConfig{
+	// 	DB: queries,
+	// }
 
 	mainRouter := chi.NewRouter()
 	mainRouter.Use(cors.Handler(cors.Options{
@@ -51,6 +50,7 @@ func main() {
 		Handler: mainRouter,
 	}
 
+	AddChannelsToDB(*queries)
 	log.Printf("Serving on port: %s\n", port)
 	log.Fatal(srv.ListenAndServe())
 }

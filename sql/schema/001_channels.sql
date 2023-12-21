@@ -4,7 +4,7 @@ CREATE TABLE channels (
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP,
     Channel TEXT NOT NULL,
-    ChannelID TEXT NOT NULL,
+    ChannelID TEXT NOT NULL UNIQUE,
     Region TEXT NOT NULL,
     Prio BOOLEAN,
     Oshi BOOLEAN,

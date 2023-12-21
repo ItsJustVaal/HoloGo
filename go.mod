@@ -12,4 +12,5 @@ require (
 require (
 	github.com/gocarina/gocsv v0.0.0-20231116093920-b87c2d0e983a // indirect
 	github.com/lib/pq v1.10.9 // indirect
+	golang.org/x/exp v0.0.0-20231219180239-dc181d75b848 // indirect
 )
