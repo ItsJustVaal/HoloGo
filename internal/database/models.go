@@ -32,3 +32,17 @@ type Playlist struct {
 	Channelid  string
 	Playlistid string
 }
+
+type Video struct {
+	ID                 uuid.UUID
+	CreatedAt          time.Time
+	UpdatedAt          sql.NullTime
+	Videoid            string
+	Playlistid         string
+	Title              string
+	Description        string
+	Thumbnail          string
+	ScheduledStartTime sql.NullString
+	ActualStartTime    sql.NullString
+	ActualEndTime      sql.NullString
+}

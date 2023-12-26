@@ -45,3 +45,30 @@ func (q *Queries) CreatePlaylist(ctx context.Context, arg CreatePlaylistParams) 
 	)
 	return i, err
 }
+
+const getPlaylistIDs = `-- name: GetPlaylistIDs :many
+SELECT playlistID FROM playlists
+`
+
+func (q *Queries) GetPlaylistIDs(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getPlaylistIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var playlistid string
+		if err := rows.Scan(&playlistid); err != nil {
+			return nil, err
+		}
+		items = append(items, playlistid)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

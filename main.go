@@ -52,11 +52,11 @@ func main() {
 		Handler: mainRouter,
 	}
 
+	AddChannelsToDB(*queries)
 	err = youtube.GetPlaylists(*queries, apiKey)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	AddChannelsToDB(*queries)
 	log.Printf("Serving on port: %s\n", port)
 	log.Fatal(srv.ListenAndServe())
 }
