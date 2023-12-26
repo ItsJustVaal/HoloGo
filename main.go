@@ -9,6 +9,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/ItsJustVaal/HoloGo/internal/database"
+	"github.com/ItsJustVaal/HoloGo/youtube"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
@@ -18,6 +19,7 @@ func main() {
 	godotenv.Load()
 	port := os.Getenv("PORT")
 	dbURL := os.Getenv("DBURL")
+	apiKey := os.Getenv("API_KEY")
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatalln(err.Error())
@@ -50,6 +52,10 @@ func main() {
 		Handler: mainRouter,
 	}
 
+	err = youtube.GetPlaylists(*queries, apiKey)
+	if err != nil {
+		log.Fatalln(err)
+	}
 	AddChannelsToDB(*queries)
 	log.Printf("Serving on port: %s\n", port)
 	log.Fatal(srv.ListenAndServe())

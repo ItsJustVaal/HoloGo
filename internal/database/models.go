@@ -24,3 +24,11 @@ type Channel struct {
 	Tags      sql.NullString
 	Company   sql.NullString
 }
+
+type Playlist struct {
+	ID         uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  sql.NullTime
+	Channelid  string
+	Playlistid string
+}
