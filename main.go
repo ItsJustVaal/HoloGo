@@ -55,12 +55,15 @@ func main() {
 		Handler: mainRouter,
 	}
 
+	// This whole section will change to a wait group
+	// Add channels wont be called, video details will be
+	// using go routines on a set interval
 	AddChannelsToDB(*queries)
 	err = youtube.GetPlaylists(*queries, apiKey, cfg.Cache)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	log.Printf("Cache Set: %v", cfg.Cache.LastVideo)
+
 	log.Printf("Serving on port: %s\n", port)
 	log.Fatal(srv.ListenAndServe())
 }
