@@ -6,7 +6,7 @@ for all holomems. Stores them in a postgres db for frontend use.
 Go, Chi, sqlc, Postgresql, Goose, HTMX
 
 # TODO
-Add wait group for youtube api calls so it can call it on set intervals to update DB
-Add docker and github stuff
-Set up API and routes
-Add basic frontend (going to try HTMX)
+Add wait group for youtube api calls so it can call it on set intervals to update DB  
+Add docker and github stuff  
+Set up API and routes  
+Add basic frontend (going to try HTMX)  
