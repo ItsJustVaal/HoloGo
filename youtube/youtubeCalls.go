@@ -14,9 +14,13 @@ import (
 	"google.golang.org/api/youtube/v3"
 )
 
+type VideoCache struct {
+	LastVideo map[string]string
+}
+
 // This function wont be run unless there are new channels
 // since playlist IDs dont change
-func GetPlaylists(db database.Queries, key string) error {
+func GetPlaylists(db database.Queries, key string, cache VideoCache) error {
 	// Grab all channel IDs from DB
 	errSlice := make([]string, 0)
 	channelIds, err := db.GetChannelIDs(context.Background())
@@ -50,13 +54,13 @@ func GetPlaylists(db database.Queries, key string) error {
 			}
 		}
 	}
-	go getVideoDetails(db, key)
-	fmt.Printf("Errors in Playlists: %v\n", errSlice)
+	go getVideoDetails(db, key, cache)
+	log.Printf("Errors in Playlists: %v\n", errSlice)
 	return nil
 }
 
-func getVideoIDs(db database.Queries, key string) (map[string][]string, error) {
-	fmt.Println("Getting Video IDs")
+func getVideoIDs(db database.Queries, key string, cache VideoCache) (map[string][]string, error) {
+	log.Println("Getting Video IDs")
 	videoMap := make(map[string][]string)
 
 	playlistIDs, err := db.GetPlaylistIDs(context.Background())
@@ -80,20 +84,25 @@ func getVideoIDs(db database.Queries, key string) (map[string][]string, error) {
 		if err != nil {
 			return videoMap, err
 		}
-
-		// items := resp.Items[0]
-
 		for _, item := range resp.Items {
 			videoMap[id] = append(videoMap[id], item.ContentDetails.VideoId)
 		}
 
 	}
+	for _, items := range videoMap {
+		slices.Reverse(items)
+	}
 	return videoMap, nil
 }
 
-func getVideoDetails(db database.Queries, key string) error {
-	fmt.Println("Starting Video Details Call")
-	videoIDs, err := getVideoIDs(db, key)
+func getVideoDetails(db database.Queries, key string, cache VideoCache) error {
+	log.Println("Setting Cache")
+	err := setCache(db, cache)
+	if err != nil {
+		log.Println(err.Error())
+	}
+	log.Println("Starting Video Details Call")
+	videoIDs, err := getVideoIDs(db, key, cache)
 	if err != nil {
 		return fmt.Errorf("failed to get video IDs: %v", err.Error())
 	}
@@ -104,8 +113,12 @@ func getVideoDetails(db database.Queries, key string) error {
 	}
 
 	for channel, videos := range videoIDs {
-		fmt.Printf("Playlist ID: %s\n", channel)
+		log.Printf("Playlist ID: %s\n", channel)
 		for _, video := range videos {
+			if cache.LastVideo[channel] == video {
+				log.Println("video found in cache, breaking")
+				break
+			}
 			call := service.Videos.List([]string{"snippet, liveStreamingDetails"})
 			resp, err := call.Id(video).Do()
 			if err != nil {
@@ -131,8 +144,9 @@ func getVideoDetails(db database.Queries, key string) error {
 					ActualEndTime:      sql.NullString{String: "None", Valid: true},
 				})
 				if err != nil {
-					fmt.Printf("failed to create video: %v\n", err.Error())
+					log.Printf("failed to create video: %v\n", err.Error())
 				}
+				cache.LastVideo[channel] = video
 			} else {
 				_, err = db.CreateVideo(context.Background(), database.CreateVideoParams{
 					ID:                 uuid.New(),
@@ -148,17 +162,44 @@ func getVideoDetails(db database.Queries, key string) error {
 					ActualEndTime:      sql.NullString{String: items.LiveStreamingDetails.ActualEndTime, Valid: true},
 				})
 				if err != nil {
-					fmt.Printf("failed to create video: %v\n", err.Error())
+					log.Printf("failed to create video: %v\n", err.Error())
 				}
+				cache.LastVideo[channel] = video
 			}
 		}
 	}
-	fmt.Println("Completed")
+	log.Println("Completed")
+	log.Printf("Cache Complete: %v", cache.LastVideo)
 	return nil
 }
 
-// First is channels to get playlist IDs, contentDetails
-// Then playlistitems to get video IDs
-// Then videos to get video info
-// Add sql field for translated video title (can make a toggle on homepage for fun)
+func NewCache() VideoCache {
+	c := VideoCache{
+		LastVideo: make(map[string]string),
+	}
+	return c
+}
+
+func setCache(db database.Queries, cache VideoCache) error {
+	if len(cache.LastVideo) <= 0 {
+		playlists, err := db.GetPlaylistIDs(context.Background())
+		if err != nil {
+			return fmt.Errorf("failed to get Playlist IDs for Cache: %v", err.Error())
+		}
+
+		for _, item := range playlists {
+			dbCheck, err := db.GetMostRecentVideo(context.Background(), item)
+			if err != nil {
+				log.Printf("No recent video found")
+				cache.LastVideo[item] = ""
+			} else {
+				cache.LastVideo[item] = dbCheck.Videoid
+				log.Printf("Set cache for playlist: %s", item)
+			}
+		}
+		log.Println("Cache Init Complete")
+	}
+	return nil
+}
+
 // Need to build cache checking so I am not calling the API a ton

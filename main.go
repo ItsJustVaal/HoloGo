@@ -9,6 +9,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/ItsJustVaal/HoloGo/internal/database"
+	"github.com/ItsJustVaal/HoloGo/internal/models"
 	"github.com/ItsJustVaal/HoloGo/youtube"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
@@ -26,10 +27,12 @@ func main() {
 	}
 
 	queries := database.New(db)
+	cache := youtube.NewCache()
 
-	// cfg := models.ApiConfig{
-	// 	DB: queries,
-	// }
+	cfg := models.ApiConfig{
+		DB:    queries,
+		Cache: cache,
+	}
 
 	mainRouter := chi.NewRouter()
 	mainRouter.Use(cors.Handler(cors.Options{
@@ -53,10 +56,11 @@ func main() {
 	}
 
 	AddChannelsToDB(*queries)
-	err = youtube.GetPlaylists(*queries, apiKey)
+	err = youtube.GetPlaylists(*queries, apiKey, cfg.Cache)
 	if err != nil {
 		log.Fatalln(err)
 	}
+	log.Printf("Cache Set: %v", cfg.Cache.LastVideo)
 	log.Printf("Serving on port: %s\n", port)
 	log.Fatal(srv.ListenAndServe())
 }
