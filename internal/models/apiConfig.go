@@ -2,10 +2,13 @@ package models
 
 import (
 	"github.com/ItsJustVaal/HoloGo/internal/database"
-	"github.com/ItsJustVaal/HoloGo/youtube"
 )
+
+type VideoCache struct {
+	LastVideo map[string]string
+}
 
 type ApiConfig struct {
 	DB    *database.Queries
-	Cache youtube.VideoCache
+	Cache VideoCache
 }

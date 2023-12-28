@@ -27,7 +27,7 @@ func main() {
 	}
 
 	queries := database.New(db)
-	cache := youtube.NewCache()
+	cache := models.NewCache()
 
 	cfg := models.ApiConfig{
 		DB:    queries,

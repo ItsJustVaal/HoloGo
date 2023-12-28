@@ -9,18 +9,15 @@ import (
 	"time"
 
 	"github.com/ItsJustVaal/HoloGo/internal/database"
+	"github.com/ItsJustVaal/HoloGo/internal/models"
 	"github.com/google/uuid"
 	"google.golang.org/api/option"
 	"google.golang.org/api/youtube/v3"
 )
 
-type VideoCache struct {
-	LastVideo map[string]string
-}
-
 // This function wont be run unless there are new channels
 // since playlist IDs dont change
-func GetPlaylists(db database.Queries, key string, cache VideoCache) error {
+func GetPlaylists(db database.Queries, key string, cache models.VideoCache) error {
 	// Grab all channel IDs from DB
 	errSlice := make([]string, 0)
 	channelIds, err := db.GetChannelIDs(context.Background())
@@ -59,7 +56,7 @@ func GetPlaylists(db database.Queries, key string, cache VideoCache) error {
 	return nil
 }
 
-func getVideoIDs(db database.Queries, key string, cache VideoCache) (map[string][]string, error) {
+func getVideoIDs(db database.Queries, key string, cache models.VideoCache) (map[string][]string, error) {
 	log.Println("Getting Video IDs")
 	videoMap := make(map[string][]string)
 
@@ -95,9 +92,9 @@ func getVideoIDs(db database.Queries, key string, cache VideoCache) (map[string]
 	return videoMap, nil
 }
 
-func getVideoDetails(db database.Queries, key string, cache VideoCache) error {
+func getVideoDetails(db database.Queries, key string, cache models.VideoCache) error {
 	log.Println("Setting Cache")
-	err := setCache(db, cache)
+	err := models.SetCache(db, cache)
 	if err != nil {
 		log.Println(err.Error())
 	}
@@ -172,34 +169,3 @@ func getVideoDetails(db database.Queries, key string, cache VideoCache) error {
 	log.Printf("Cache Complete: %v", cache.LastVideo)
 	return nil
 }
-
-func NewCache() VideoCache {
-	c := VideoCache{
-		LastVideo: make(map[string]string),
-	}
-	return c
-}
-
-func setCache(db database.Queries, cache VideoCache) error {
-	if len(cache.LastVideo) <= 0 {
-		playlists, err := db.GetPlaylistIDs(context.Background())
-		if err != nil {
-			return fmt.Errorf("failed to get Playlist IDs for Cache: %v", err.Error())
-		}
-
-		for _, item := range playlists {
-			dbCheck, err := db.GetMostRecentVideo(context.Background(), item)
-			if err != nil {
-				log.Printf("No recent video found")
-				cache.LastVideo[item] = ""
-			} else {
-				cache.LastVideo[item] = dbCheck.Videoid
-				log.Printf("Set cache for playlist: %s", item)
-			}
-		}
-		log.Println("Cache Init Complete")
-	}
-	return nil
-}
-
-// Need to build cache checking so I am not calling the API a ton
