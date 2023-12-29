@@ -65,7 +65,7 @@ func main() {
 
 	
 	const interval = time.Minute
-	go youtube.StartYoutubeCalls(*queries, apiKey, cfg.Cache, interval)
+	go youtube.StartYoutubeCalls(*cfg.DB, apiKey, cfg.Cache, interval)
 
 	// Leaving this here for now even though its just admin stuff
 	// AddChannelsToDB(*queries)
