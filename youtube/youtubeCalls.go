@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/ItsJustVaal/HoloGo/internal/database"
@@ -14,6 +15,24 @@ import (
 	"google.golang.org/api/option"
 	"google.golang.org/api/youtube/v3"
 )
+
+func StartYoutubeCalls(db database.Queries, key string, cache models.VideoCache, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+
+	for ; ; <-ticker.C {
+		playlistIDs, err := db.GetPlaylistIDs(context.Background())
+		if err != nil {
+			log.Printf("failed to get playlist ids: %v", err.Error())
+		}
+
+		wg := &sync.WaitGroup{}
+		for _, playlist := range playlistIDs {
+			wg.Add(1)
+			go getVideoDetails(db, key, cache, wg, playlist)
+		}
+		wg.Wait()
+	}
+}
 
 // This function wont be run unless there are new channels
 // since playlist IDs dont change
@@ -51,55 +70,34 @@ func GetPlaylists(db database.Queries, key string, cache models.VideoCache) erro
 			}
 		}
 	}
-	go getVideoDetails(db, key, cache)
 	log.Printf("Errors in Playlists: %v\n", errSlice)
 	return nil
 }
 
-func getVideoIDs(db database.Queries, key string, cache models.VideoCache) (map[string][]string, error) {
+func getVideoIDs(db database.Queries, key string, playlist string) ([]string, error) {
 	log.Println("Getting Video IDs")
-	videoMap := make(map[string][]string)
-
-	playlistIDs, err := db.GetPlaylistIDs(context.Background())
-	if err != nil {
-		return nil, fmt.Errorf("failed to get playlist ids: %v", err.Error())
-	}
-
+	videoMap := []string{}
 	service, err := youtube.NewService(context.Background(), option.WithAPIKey(key))
 	if err != nil {
 		return nil, err
 	}
 
-	for _, id := range playlistIDs {
-		_, ok := videoMap[id]
-		if !ok {
-			videoMap[id] = []string{}
-		}
-
-		call := service.PlaylistItems.List([]string{"contentDetails"}).MaxResults(15)
-		resp, err := call.PlaylistId(id).Do()
-		if err != nil {
-			return videoMap, err
-		}
-		for _, item := range resp.Items {
-			videoMap[id] = append(videoMap[id], item.ContentDetails.VideoId)
-		}
-
+	call := service.PlaylistItems.List([]string{"contentDetails"}).MaxResults(15)
+	resp, err := call.PlaylistId(playlist).Do()
+	if err != nil {
+		return videoMap, err
 	}
-	for _, items := range videoMap {
-		slices.Reverse(items)
+
+	for _, item := range resp.Items {
+		videoMap = append(videoMap, item.ContentDetails.VideoId)
 	}
 	return videoMap, nil
 }
 
-func getVideoDetails(db database.Queries, key string, cache models.VideoCache) error {
-	log.Println("Setting Cache")
-	err := models.SetCache(db, cache)
-	if err != nil {
-		log.Println(err.Error())
-	}
+func getVideoDetails(db database.Queries, key string, cache models.VideoCache, wg *sync.WaitGroup, playlist string) error {
+	defer wg.Done()
 	log.Println("Starting Video Details Call")
-	videoIDs, err := getVideoIDs(db, key, cache)
+	videoIDs, err := getVideoIDs(db, key, playlist)
 	if err != nil {
 		return fmt.Errorf("failed to get video IDs: %v", err.Error())
 	}
@@ -108,64 +106,61 @@ func getVideoDetails(db database.Queries, key string, cache models.VideoCache) e
 	if err != nil {
 		return err
 	}
+	log.Printf("Playlist: %s", playlist)
+	for _, video := range videoIDs {
+		log.Printf("Video ID: %s\n", video)
+		if cache.LastVideo[playlist] == video {
+			log.Println("video found in cache, breaking")
+			break
+		}
+		call := service.Videos.List([]string{"snippet, liveStreamingDetails"})
+		resp, err := call.Id(video).Do()
+		if err != nil {
+			log.Fatalf("failed to get video details: %v\n", err.Error())
+		}
+		items := resp.Items[0]
+		if items.Snippet.Thumbnails.Standard == nil {
+			items.Snippet.Thumbnails.Standard = items.Snippet.Thumbnails.High
+		}
 
-	for channel, videos := range videoIDs {
-		log.Printf("Playlist ID: %s\n", channel)
-		for _, video := range videos {
-			if cache.LastVideo[channel] == video {
-				log.Println("video found in cache, breaking")
-				break
-			}
-			call := service.Videos.List([]string{"snippet, liveStreamingDetails"})
-			resp, err := call.Id(video).Do()
+		if items.LiveStreamingDetails == nil {
+			_, err = db.CreateVideo(context.Background(), database.CreateVideoParams{
+				ID:                 uuid.New(),
+				CreatedAt:          time.Now().UTC(),
+				UpdatedAt:          sql.NullTime{Time: time.Now().UTC(), Valid: true},
+				Videoid:            video,
+				Playlistid:         playlist,
+				Title:              items.Snippet.Title,
+				Description:        items.Snippet.Description,
+				Thumbnail:          items.Snippet.Thumbnails.High.Url,
+				ScheduledStartTime: sql.NullString{String: "None", Valid: true},
+				ActualStartTime:    sql.NullString{String: "None", Valid: true},
+				ActualEndTime:      sql.NullString{String: "None", Valid: true},
+			})
 			if err != nil {
-				log.Fatalf("failed to get video details: %v\n", err.Error())
+				log.Printf("failed to create video: %v\n", err.Error())
 			}
-			items := resp.Items[0]
-			if items.Snippet.Thumbnails.Standard == nil {
-				items.Snippet.Thumbnails.Standard = items.Snippet.Thumbnails.High
+			cache.LastVideo[playlist] = video
+		} else {
+			_, err = db.CreateVideo(context.Background(), database.CreateVideoParams{
+				ID:                 uuid.New(),
+				CreatedAt:          time.Now().UTC(),
+				UpdatedAt:          sql.NullTime{Time: time.Now().UTC(), Valid: true},
+				Videoid:            video,
+				Playlistid:         playlist,
+				Title:              items.Snippet.Title,
+				Description:        items.Snippet.Description,
+				Thumbnail:          items.Snippet.Thumbnails.High.Url,
+				ScheduledStartTime: sql.NullString{String: items.LiveStreamingDetails.ScheduledStartTime, Valid: true},
+				ActualStartTime:    sql.NullString{String: items.LiveStreamingDetails.ActualStartTime, Valid: true},
+				ActualEndTime:      sql.NullString{String: items.LiveStreamingDetails.ActualEndTime, Valid: true},
+			})
+			if err != nil {
+				log.Printf("failed to create video: %v\n", err.Error())
 			}
-
-			if items.LiveStreamingDetails == nil {
-				_, err = db.CreateVideo(context.Background(), database.CreateVideoParams{
-					ID:                 uuid.New(),
-					CreatedAt:          time.Now().UTC(),
-					UpdatedAt:          sql.NullTime{Time: time.Now().UTC(), Valid: true},
-					Videoid:            video,
-					Playlistid:         channel,
-					Title:              items.Snippet.Title,
-					Description:        items.Snippet.Description,
-					Thumbnail:          items.Snippet.Thumbnails.High.Url,
-					ScheduledStartTime: sql.NullString{String: "None", Valid: true},
-					ActualStartTime:    sql.NullString{String: "None", Valid: true},
-					ActualEndTime:      sql.NullString{String: "None", Valid: true},
-				})
-				if err != nil {
-					log.Printf("failed to create video: %v\n", err.Error())
-				}
-				cache.LastVideo[channel] = video
-			} else {
-				_, err = db.CreateVideo(context.Background(), database.CreateVideoParams{
-					ID:                 uuid.New(),
-					CreatedAt:          time.Now().UTC(),
-					UpdatedAt:          sql.NullTime{Time: time.Now().UTC(), Valid: true},
-					Videoid:            video,
-					Playlistid:         channel,
-					Title:              items.Snippet.Title,
-					Description:        items.Snippet.Description,
-					Thumbnail:          items.Snippet.Thumbnails.High.Url,
-					ScheduledStartTime: sql.NullString{String: items.LiveStreamingDetails.ScheduledStartTime, Valid: true},
-					ActualStartTime:    sql.NullString{String: items.LiveStreamingDetails.ActualStartTime, Valid: true},
-					ActualEndTime:      sql.NullString{String: items.LiveStreamingDetails.ActualEndTime, Valid: true},
-				})
-				if err != nil {
-					log.Printf("failed to create video: %v\n", err.Error())
-				}
-				cache.LastVideo[channel] = video
-			}
+			cache.LastVideo[playlist] = video
 		}
 	}
 	log.Println("Completed")
-	log.Printf("Cache Complete: %v", cache.LastVideo)
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	_ "github.com/lib/pq"
 
@@ -28,6 +29,13 @@ func main() {
 
 	queries := database.New(db)
 	cache := models.NewCache()
+
+	log.Println("Setting Cache")
+	err = models.SetCache(*queries, cache)
+	if err != nil {
+		log.Println(err.Error())
+	}
+	log.Println(cache.LastVideo)
 
 	cfg := models.ApiConfig{
 		DB:    queries,
@@ -55,14 +63,16 @@ func main() {
 		Handler: mainRouter,
 	}
 
-	// This whole section will change to a wait group
-	// Add channels wont be called, video details will be
-	// using go routines on a set interval
-	AddChannelsToDB(*queries)
-	err = youtube.GetPlaylists(*queries, apiKey, cfg.Cache)
-	if err != nil {
-		log.Fatalln(err)
-	}
+	
+	const interval = time.Minute
+	go youtube.StartYoutubeCalls(*queries, apiKey, cfg.Cache, interval)
+
+	// Leaving this here for now even though its just admin stuff
+	// AddChannelsToDB(*queries)
+	// err = youtube.GetPlaylists(*queries, apiKey, cfg.Cache)
+	// if err != nil {
+	// 	log.Fatalln(err)
+	// }
 
 	log.Printf("Serving on port: %s\n", port)
 	log.Fatal(srv.ListenAndServe())
