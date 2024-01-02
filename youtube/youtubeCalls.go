@@ -94,24 +94,28 @@ func getVideoIDs(db database.Queries, key string, playlist string) ([]string, er
 	return videoMap, nil
 }
 
-func getVideoDetails(db database.Queries, key string, cache models.VideoCache, wg *sync.WaitGroup, playlist string) error {
+func getVideoDetails(db database.Queries, key string, cache models.VideoCache, wg *sync.WaitGroup, playlist string) {
 	defer wg.Done()
 	log.Println("Starting Video Details Call")
 	videoIDs, err := getVideoIDs(db, key, playlist)
 	if err != nil {
-		return fmt.Errorf("failed to get video IDs: %v", err.Error())
+		log.Fatalf("Failed to get video IDs: %v", err.Error())
 	}
 
 	service, err := youtube.NewService(context.Background(), option.WithAPIKey(key))
 	if err != nil {
-		return err
+		log.Fatalf("Failed to make youtube service: %v", err.Error())
 	}
-	log.Printf("Playlist: %s", playlist)
+
 	for _, video := range videoIDs {
+		log.Println(videoIDs)
+		log.Printf("Playlist: %s", playlist)
 		log.Printf("Video ID: %s\n", video)
+		log.Printf("Current cache: %s", cache.LastVideo[playlist])
 		if cache.LastVideo[playlist] == video {
+			cache.LastVideo[playlist] = videoIDs[0]
 			log.Println("video found in cache, breaking")
-			break
+			return
 		}
 		call := service.Videos.List([]string{"snippet, liveStreamingDetails"})
 		resp, err := call.Id(video).Do()
@@ -138,9 +142,8 @@ func getVideoDetails(db database.Queries, key string, cache models.VideoCache, w
 				ActualEndTime:      sql.NullString{String: "None", Valid: true},
 			})
 			if err != nil {
-				log.Printf("failed to create video: %v\n", err.Error())
+				log.Printf("failed to create video with ID: %s with error: %v\n", video, err.Error())
 			}
-			cache.LastVideo[playlist] = video
 		} else {
 			_, err = db.CreateVideo(context.Background(), database.CreateVideoParams{
 				ID:                 uuid.New(),
@@ -156,11 +159,10 @@ func getVideoDetails(db database.Queries, key string, cache models.VideoCache, w
 				ActualEndTime:      sql.NullString{String: items.LiveStreamingDetails.ActualEndTime, Valid: true},
 			})
 			if err != nil {
-				log.Printf("failed to create video: %v\n", err.Error())
+				log.Printf("failed to create video with ID: %s with error: %v\n", video, err.Error())
 			}
-			cache.LastVideo[playlist] = video
 		}
 	}
+
 	log.Println("Completed")
-	return nil
 }

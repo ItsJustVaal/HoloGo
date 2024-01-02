@@ -4,7 +4,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING *;
 
 -- name: GetMostRecentVideo :one
-SELECT videoID, playlistID FROM videos
+SELECT videoID FROM videos
 WHERE playlistID = $1
-ORDER BY created_at DESC
+ORDER BY created_at ASC
 LIMIT 1;

@@ -28,7 +28,7 @@ func SetCache(db database.Queries, cache VideoCache) error {
 				log.Printf("No recent video found")
 				cache.LastVideo[item] = ""
 			} else {
-				cache.LastVideo[item] = dbCheck.Videoid
+				cache.LastVideo[item] = dbCheck
 				log.Printf("Set cache for playlist: %s", item)
 			}
 		}

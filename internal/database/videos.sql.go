@@ -65,20 +65,15 @@ func (q *Queries) CreateVideo(ctx context.Context, arg CreateVideoParams) (Video
 }
 
 const getMostRecentVideo = `-- name: GetMostRecentVideo :one
-SELECT videoID, playlistID FROM videos
+SELECT videoID FROM videos
 WHERE playlistID = $1
-ORDER BY created_at DESC
+ORDER BY created_at ASC
 LIMIT 1
 `
 
-type GetMostRecentVideoRow struct {
-	Videoid    string
-	Playlistid string
-}
-
-func (q *Queries) GetMostRecentVideo(ctx context.Context, playlistid string) (GetMostRecentVideoRow, error) {
+func (q *Queries) GetMostRecentVideo(ctx context.Context, playlistid string) (string, error) {
 	row := q.db.QueryRowContext(ctx, getMostRecentVideo, playlistid)
-	var i GetMostRecentVideoRow
-	err := row.Scan(&i.Videoid, &i.Playlistid)
-	return i, err
+	var videoid string
+	err := row.Scan(&videoid)
+	return videoid, err
 }
