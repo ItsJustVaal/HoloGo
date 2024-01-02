@@ -17,6 +17,8 @@ Add basic frontend (going to try HTMX)
 
 The cache mostly works, I cannot for the life of me
 figure out how youtube is ordering the call returns
+when a channel is live during the call. Need to rerun
+post live test to see if it changes the order
 
 To be honest the cache is kinda mostly pointless
 until I add an update function too to update the
