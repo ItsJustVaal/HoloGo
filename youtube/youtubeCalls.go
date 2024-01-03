@@ -31,6 +31,7 @@ func StartYoutubeCalls(db database.Queries, key string, cache models.VideoCache,
 			go getVideoDetails(db, key, cache, wg, playlist)
 		}
 		wg.Wait()
+		log.Println("Completed")
 	}
 }
 
@@ -82,8 +83,7 @@ func getVideoIDs(db database.Queries, key string, playlist string) ([]string, er
 		return nil, err
 	}
 
-	call := service.PlaylistItems.List([]string{"contentDetails"}).MaxResults(15)
-	resp, err := call.PlaylistId(playlist).Do()
+	resp, err := service.PlaylistItems.List([]string{"contentDetails"}).PlaylistId(playlist).MaxResults(15).Do()
 	if err != nil {
 		return videoMap, err
 	}
@@ -108,17 +108,14 @@ func getVideoDetails(db database.Queries, key string, cache models.VideoCache, w
 	}
 
 	for _, video := range videoIDs {
-		log.Println(videoIDs)
-		log.Printf("Playlist: %s", playlist)
-		log.Printf("Video ID: %s\n", video)
-		log.Printf("Current cache: %s", cache.LastVideo[playlist])
 		if cache.LastVideo[playlist] == video {
 			cache.LastVideo[playlist] = videoIDs[0]
 			log.Println("video found in cache, breaking")
 			return
 		}
-		call := service.Videos.List([]string{"snippet, liveStreamingDetails"})
-		resp, err := call.Id(video).Do()
+
+		// Youtube calls start here
+		resp, err := service.Videos.List([]string{"snippet, liveStreamingDetails"}).Id(video).Do()
 		if err != nil {
 			log.Fatalf("failed to get video details: %v\n", err.Error())
 		}
@@ -126,7 +123,10 @@ func getVideoDetails(db database.Queries, key string, cache models.VideoCache, w
 		if items.Snippet.Thumbnails.Standard == nil {
 			items.Snippet.Thumbnails.Standard = items.Snippet.Thumbnails.High
 		}
-
+		timeCnv, err := time.Parse(time.RFC3339,items.Snippet.PublishedAt)
+		if err != nil {
+			log.Println(err.Error())
+		}
 		if items.LiveStreamingDetails == nil {
 			_, err = db.CreateVideo(context.Background(), database.CreateVideoParams{
 				ID:                 uuid.New(),
@@ -137,6 +137,7 @@ func getVideoDetails(db database.Queries, key string, cache models.VideoCache, w
 				Title:              items.Snippet.Title,
 				Description:        items.Snippet.Description,
 				Thumbnail:          items.Snippet.Thumbnails.High.Url,
+				PublishedAt: 		sql.NullTime{Time: timeCnv, Valid: true},
 				ScheduledStartTime: sql.NullString{String: "None", Valid: true},
 				ActualStartTime:    sql.NullString{String: "None", Valid: true},
 				ActualEndTime:      sql.NullString{String: "None", Valid: true},
@@ -154,6 +155,7 @@ func getVideoDetails(db database.Queries, key string, cache models.VideoCache, w
 				Title:              items.Snippet.Title,
 				Description:        items.Snippet.Description,
 				Thumbnail:          items.Snippet.Thumbnails.High.Url,
+				PublishedAt: 		sql.NullTime{Time: timeCnv, Valid: true},
 				ScheduledStartTime: sql.NullString{String: items.LiveStreamingDetails.ScheduledStartTime, Valid: true},
 				ActualStartTime:    sql.NullString{String: items.LiveStreamingDetails.ActualStartTime, Valid: true},
 				ActualEndTime:      sql.NullString{String: items.LiveStreamingDetails.ActualEndTime, Valid: true},
@@ -163,6 +165,4 @@ func getVideoDetails(db database.Queries, key string, cache models.VideoCache, w
 			}
 		}
 	}
-
-	log.Println("Completed")
 }

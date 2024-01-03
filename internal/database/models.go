@@ -42,6 +42,7 @@ type Video struct {
 	Title              string
 	Description        string
 	Thumbnail          string
+	PublishedAt        sql.NullTime
 	ScheduledStartTime sql.NullString
 	ActualStartTime    sql.NullString
 	ActualEndTime      sql.NullString

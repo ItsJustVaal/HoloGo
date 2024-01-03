@@ -8,6 +8,7 @@ CREATE TABLE videos (
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     thumbnail TEXT NOT NULL,
+    published_at TIMESTAMP,
     scheduled_start_time TEXT,
     actual_start_time TEXT,
     actual_end_time TEXT

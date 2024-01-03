@@ -15,11 +15,7 @@ Add basic frontend (going to try HTMX)
 
 # Notes
 
-The cache mostly works, I cannot for the life of me
-figure out how youtube is ordering the call returns
-when a channel is live during the call. Need to rerun
-post live test to see if it changes the order
+Fixed the cache by adding the published at date converted
+to RFC3339 then using that to set the cache.
 
-To be honest the cache is kinda mostly pointless
-until I add an update function too to update the
-time fields
+Next is to set up a basic front end
