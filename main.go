@@ -28,12 +28,14 @@ func main() {
 	}
 
 	queries := database.New(db)
-	cache := models.NewCache()
+	cache := models.VideoCache{
+		LastVideo: make(map[string]string),
+	}
 
 	log.Println("Setting Cache")
-	err = models.SetCache(*queries, cache)
+	err = cache.SetCache(*queries, cache)
 	if err != nil {
-		log.Println(err.Error())
+		log.Fatalln(err.Error())
 	}
 
 	cfg := models.ApiConfig{
@@ -62,9 +64,7 @@ func main() {
 		Handler: mainRouter,
 	}
 
-	// Youtube calls on an interval to update DB for the api
-	log.Printf("Current Cache: %v\n", cfg.Cache.LastVideo)
-	log.Println("Starting youtube call interval")
+	// Youtube calls on an interval to update DB for my api
 	const interval = time.Hour
 	go youtube.StartYoutubeCalls(*cfg.DB, apiKey, cfg.Cache, interval)
 
