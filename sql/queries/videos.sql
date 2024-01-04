@@ -6,5 +6,4 @@ RETURNING *;
 -- name: GetMostRecentVideo :one
 SELECT videoID FROM videos
 WHERE playlistID = $1
-ORDER BY published_at DESC
-LIMIT 1;
+ORDER BY published_at DESC;
