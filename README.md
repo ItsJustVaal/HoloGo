@@ -13,7 +13,7 @@ outside data for each channel to make a one stop shop space that is always up to
 
 ## Current Technologies Used
 
-Go, Chi, SQLc, PostgreSQL, Goose, HTMX
+Go, Chi, sqlc, PostgreSQL, Goose, HTMX
 
 ## TODO
 
