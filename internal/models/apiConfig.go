@@ -8,15 +8,23 @@ import (
 	"github.com/ItsJustVaal/HoloGo/internal/database"
 )
 
+// Video cache map that will set the playlist to
+// the most recent video ID in the DB
 type VideoCache struct {
 	LastVideo map[string]string
 }
 
+
+// API Cache
 type ApiConfig struct {
 	DB    *database.Queries
 	Cache VideoCache
 }
 
+// Calls the DB for the most recent Video ID for each channel
+// Maps the playlist to the Video ID, then sets that map in the 
+// API struct to be used as a server cache. This will limit the
+// number of calls I need to make to the Youtube API.
 func (v VideoCache) SetCache(db database.Queries, cache VideoCache) error {
 	if len(cache.LastVideo) <= 0 {
 		playlists, err := db.GetPlaylistIDs(context.Background())

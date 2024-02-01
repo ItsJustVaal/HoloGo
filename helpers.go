@@ -16,17 +16,20 @@ import (
 	"github.com/google/uuid"
 )
 
+// v1 Readiness Handler
 func handleGetReadiness(w http.ResponseWriter, r *http.Request) {
 	models.RespondWithJSON(w, http.StatusOK, models.JsonResponse{
 		Status: "ok",
 	})
 }
 
+// v1 Error Handler
 func handleGetErr(w http.ResponseWriter, r *http.Request) {
 	models.RespondWithError(w, http.StatusInternalServerError, "Internal Server Error")
 }
 
 // This is just a helper function for me to add all the chs to DB from a csv, setup function
+// This will also be changed into a admin or CLI action later
 func AddChannelsToDB(db database.Queries) {
 	channelsFile, err := os.OpenFile("holodash.csv", os.O_RDWR|os.O_CREATE, os.ModePerm)
 	if err != nil {

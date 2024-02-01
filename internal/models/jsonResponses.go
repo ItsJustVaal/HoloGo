@@ -6,12 +6,14 @@ import (
 	"net/http"
 )
 
+// Error Response
 func RespondWithError(w http.ResponseWriter, code int, msg string) {
 	RespondWithJSON(w, code, JsonErrorResponse{
 		Error: msg,
 	})
 }
 
+// Generic JSON response function
 func RespondWithJSON(w http.ResponseWriter, statusCode int, response interface{}) {
 	w.Header().Set("Content-Type", "applcation/json")
 	data, err := json.Marshal(response)

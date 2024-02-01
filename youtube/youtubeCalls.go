@@ -16,8 +16,10 @@ import (
 	"google.golang.org/api/youtube/v3"
 )
 
+// Sets up the interval and wait group then starts a
+// a routine for each channel call
 func StartYoutubeCalls(db database.Queries, key string, cache models.VideoCache, interval time.Duration) {
-	ticker := time.NewTicker(interval * 10)
+	ticker := time.NewTicker(interval * 60)
 	log.Println("Starting Youtube Calls")
 	for range ticker.C {
 		playlistIDs, err := db.GetPlaylistIDs(context.Background())
@@ -35,6 +37,9 @@ func StartYoutubeCalls(db database.Queries, key string, cache models.VideoCache,
 	}
 }
 
+// Gets the most recent video IDs for each channel
+// This uses the least amount of Youtube API call resources
+// as possible
 func getVideoIDs(db database.Queries, key string, playlist string) ([]string, error) {
 	videoMap := []string{}
 	service, err := youtube.NewService(context.Background(), option.WithAPIKey(key))
@@ -55,41 +60,48 @@ func getVideoIDs(db database.Queries, key string, playlist string) ([]string, er
 
 func getVideoDetails(db database.Queries, key string, cache models.VideoCache, wg *sync.WaitGroup, playlist string) {
 	defer wg.Done()
+
+	// First Call to get most recent video IDs for each channel
+	log.Println("STARTING")
 	videoIDs, err := getVideoIDs(db, key, playlist)
 	if err != nil {
 		log.Fatalf("Failed to get video IDs: %v", err.Error())
 	}
 
+	// Youtube Client init
 	service, err := youtube.NewService(context.Background(), option.WithAPIKey(key))
 	if err != nil {
 		log.Fatalf("Failed to make youtube service: %v", err.Error())
 	}
 
 	for _, video := range videoIDs {
-		log.Printf("Playlist: %s", playlist)
-		log.Printf("Video ID: %s", video)
+		// Checks if the most recent video is in the cache
+		// if it is, it ends the go routine
 		if cache.LastVideo[playlist] == video {
 			cache.LastVideo[playlist] = videoIDs[0]
 			log.Println("video found in cache, breaking")
 			return
 		}
 
-		// Youtube calls start here
+		// Youtube calls start here if the cache != the most recent video
 		resp, err := service.Videos.List([]string{"snippet, liveStreamingDetails"}).Id(video).Do()
 		if err != nil {
 			log.Fatalf("failed to get video details: %v\n", err.Error())
 		}
 		
+		// Checks for nil thumbnail value
 		items := resp.Items[0]
 		if items.Snippet.Thumbnails.Standard == nil {
 			items.Snippet.Thumbnails.Standard = items.Snippet.Thumbnails.High
 		}
 		
+		// Converts the published at time
 		timeCnv, err := time.Parse(time.RFC3339,items.Snippet.PublishedAt)
 		if err != nil {
 			log.Println(err.Error())
 		}
 		
+		// Runs if the video is not a live stream
 		if items.LiveStreamingDetails == nil {
 			_, err = db.CreateVideo(context.Background(), database.CreateVideoParams{
 				ID:                 uuid.New(),
@@ -108,6 +120,7 @@ func getVideoDetails(db database.Queries, key string, cache models.VideoCache, w
 			if err != nil {
 				log.Printf("failed to create video with ID: %s with error: %v\n", video, err.Error())
 			}
+			// Runs if the video is/was a live stream
 		} else {
 			_, err = db.CreateVideo(context.Background(), database.CreateVideoParams{
 				ID:                 uuid.New(),
@@ -132,7 +145,8 @@ func getVideoDetails(db database.Queries, key string, cache models.VideoCache, w
 
 
 // This function wont be run unless there are new channels
-// since playlist IDs dont change
+// since playlist IDs dont change, will change this into 
+// a proper admin command or a CLI tool
 func GetPlaylists(db database.Queries, key string, cache models.VideoCache) error {
 	// Grab all channel IDs from DB
 	errSlice := make([]string, 0)

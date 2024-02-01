@@ -2,6 +2,9 @@ package models
 
 import "time"
 
+// All of these are structs converted from the Youtube API response
+// for each respective call
+
 type Playlist struct {
 	Items []struct {
 		ContentDetails struct {

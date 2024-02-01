@@ -18,31 +18,40 @@ import (
 )
 
 func main() {
+	// env variable init
 	godotenv.Load()
 	apiKey := os.Getenv("API_KEY")
 	port := os.Getenv("PORT")
 	dbURL := os.Getenv("DBURL")
+
+	// DB init
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
-
 	queries := database.New(db)
+
+	// Cache init
 	cache := models.VideoCache{
 		LastVideo: make(map[string]string),
 	}
-
+	// Sets the Server Cache with most recent videoID
+	// from each channel, if no ID exists, uses zero value
 	log.Println("Setting Cache")
 	err = cache.SetCache(*queries, cache)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
 
+
+	// Sets API Config Struct
 	cfg := models.ApiConfig{
 		DB:    queries,
 		Cache: cache,
 	}
 
+	// Sets main router and cors settings
+	// This will be secured once im not using localhost
 	mainRouter := chi.NewRouter()
 	mainRouter.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
@@ -53,19 +62,22 @@ func main() {
 		MaxAge:           300,
 	}))
 
+	// V1 Router to check server status
 	v1Router := chi.NewRouter()
 	v1Router.Get("/readiness", handleGetReadiness)
 	v1Router.Get("/err", handleGetErr)
 
 	mainRouter.Mount("/v1", v1Router)
 
+	// Sets Server Struct
 	srv := &http.Server{
 		Addr:    ":" + port,
 		Handler: mainRouter,
 	}
 
-	// Youtube calls on an interval to update DB for my api
-	const interval = time.Hour
+	// Youtube calls on an interval to update the Server Cache and DB for API
+	// Uses a go wait group to make a seperate call for each channel
+	const interval = time.Minute * 30
 	go youtube.StartYoutubeCalls(*cfg.DB, apiKey, cfg.Cache, interval)
 
 

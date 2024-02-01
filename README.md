@@ -1,26 +1,30 @@
-# HoloGo
+## HoloGo
 
-A back end API that uses Youtube API to track and store videos
-for all holomems. Stores them in a postgres db for frontend use.
+# About
 
-# Technologies
+The standard youtube interface is not organized, navigatable and seems to never be full up to date
+with the live streams on their site. I am putting together a personalized dashboard that utilizes
+the youtube API to show specific channels (these channels can be a list of any channels, im using Hololive in this case)
 
-Go, Chi, sqlc, Postgresql, Goose, HTMX
+The idea is to make a semi-customizable interface that is easily navigated, well organized and brings together
+outside data for each channel to make a one stop shop space that is always up to date.
+
+# Current Technologies Used
+
+Go, Chi, SQLc, PostgreSQL, Goose, HTMX
 
 # TODO
 
-Add dockerfile to host on my pi later
-Set up API and routes  
-Add basic frontend (going to try HTMX)
+Set up main routes to being building the Front-End
+Setup Front-end using HTMX and Go Templates
+Add dockerfile & Deploy / Host from my Raspberry Pi
+Add an Admin Center for personal commands (I.E. adding and removing channels from the DB)
+Add user login and auth
 
 # Notes
 
-Fixed the cache by adding the published at date converted
-to RFC3339 and ordered by that, and fixed the ticker loop that was causing
-the goroutine to call the same playlist ids sometimes
-for some reason.
-
-Added a github workflow for formatting checks
-
-Next is to set up a few basic routes
-then a basic front end
+The Youtube API is using my personal API Key
+this results in incomplete video listings as
+streams such as membership only streams will
+not populate. I will need to look into this in the future
+to properly add user customization.
