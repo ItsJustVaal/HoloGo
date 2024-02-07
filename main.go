@@ -29,6 +29,7 @@ func main() {
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
+	defer db.Close()
 	queries := database.New(db)
 
 	// Cache init
