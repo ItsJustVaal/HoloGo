@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/ItsJustVaal/HoloGo/internal/database"
-	"github.com/ItsJustVaal/HoloGo/internal/models"
+	"github.com/ItsJustVaal/HoloGo/models"
 	"github.com/google/uuid"
 	"google.golang.org/api/option"
 	"google.golang.org/api/youtube/v3"
@@ -22,15 +22,15 @@ func StartYoutubeCalls(db database.Queries, key string, cache models.VideoCache,
 	ticker := time.NewTicker(interval)
 	log.Println("Starting Youtube Calls")
 	for range ticker.C {
-		playlistIDs, err := db.GetPlaylistIDs(context.Background())
-		if err != nil {
-			log.Printf("failed to get playlist ids: %v", err.Error())
-		}
-		log.Printf(playlistIDs[0])
+		// playlistIDs, err := db.GetPlaylistIDs(context.Background())
+		// if err != nil {
+		// 	log.Printf("failed to get playlist ids: %v", err.Error())
+		// }
+		// log.Printf(playlistIDs[0])
 
 		wg := &sync.WaitGroup{}
-		for _, playlist := range playlistIDs {
-			log.Println("we inside")
+		for playlist := range cache.LastVideo {
+			log.Println("PLAYLIST ID " + playlist)
 			wg.Add(1)
 			go getVideoDetails(db, key, cache, wg, playlist)
 		}
@@ -43,7 +43,6 @@ func StartYoutubeCalls(db database.Queries, key string, cache models.VideoCache,
 // This uses the least amount of Youtube API call resources
 // as possible
 func getVideoIDs(key string, playlist string) ([]string, error) {
-	log.Println("vids tho")
 	videoMap := []string{}
 	service, err := youtube.NewService(context.Background(), option.WithAPIKey(key))
 	if err != nil {
@@ -65,10 +64,9 @@ func getVideoDetails(db database.Queries, key string, cache models.VideoCache, w
 	defer wg.Done()
 
 	// First Call to get most recent video IDs for each channel
-	log.Println("STARTING")
 	videoIDs, err := getVideoIDs(key, playlist)
 	if err != nil {
-		log.Fatalf("Failed to get video IDs: %v", err.Error())
+		log.Printf("Failed to get video IDs for playlist: %s %v", playlist, err.Error())
 	}
 
 	// Youtube Client init

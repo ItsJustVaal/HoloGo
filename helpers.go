@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/ItsJustVaal/HoloGo/internal/database"
-	"github.com/ItsJustVaal/HoloGo/internal/models"
+	"github.com/ItsJustVaal/HoloGo/models"
 	"github.com/gocarina/gocsv"
 	"github.com/google/uuid"
 )

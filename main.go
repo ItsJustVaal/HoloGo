@@ -10,7 +10,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/ItsJustVaal/HoloGo/internal/database"
-	"github.com/ItsJustVaal/HoloGo/internal/models"
+	"github.com/ItsJustVaal/HoloGo/models"
 	"github.com/ItsJustVaal/HoloGo/youtube"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
@@ -36,18 +36,19 @@ func main() {
 	cache := models.VideoCache{
 		LastVideo: make(map[string]string),
 	}
+
+	// Sets API Config Struct
+	cfg := models.ApiConfig{
+		DB:    queries,
+		Cache: cache,
+	}
+
 	// Sets the Server Cache with most recent videoID
 	// from each channel, if no ID exists, uses zero value
 	log.Println("Setting Cache")
 	err = cache.SetCache(*queries, cache)
 	if err != nil {
 		log.Fatalln(err.Error())
-	}
-
-	// Sets API Config Struct
-	cfg := models.ApiConfig{
-		DB:    queries,
-		Cache: cache,
 	}
 
 	// Sets main router and cors settings
@@ -77,7 +78,7 @@ func main() {
 
 	// Youtube calls on an interval to update the Server Cache and DB for API
 	// Uses a go wait group to make a seperate call for each channel
-	const interval = time.Minute * 2
+	const interval = time.Second * 30
 	go youtube.StartYoutubeCalls(*cfg.DB, apiKey, cfg.Cache, interval)
 
 	log.Printf("Serving on port: %s\n", port)
