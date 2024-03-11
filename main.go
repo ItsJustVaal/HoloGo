@@ -7,10 +7,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/gorilla/csrf"
 	_ "github.com/lib/pq"
 
+	"github.com/ItsJustVaal/HoloGo/controllers"
 	"github.com/ItsJustVaal/HoloGo/internal/database"
 	"github.com/ItsJustVaal/HoloGo/models"
+	"github.com/ItsJustVaal/HoloGo/templates"
+	"github.com/ItsJustVaal/HoloGo/views"
 	"github.com/ItsJustVaal/HoloGo/youtube"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
@@ -39,8 +43,10 @@ func main() {
 
 	// Sets API Config Struct
 	cfg := models.ApiConfig{
-		DB:    queries,
-		Cache: cache,
+		DB:         queries,
+		Cache:      cache,
+		CSRFKey:    os.Getenv("CSRF_KEY"),
+		CSRFSecure: false,
 	}
 
 	// Sets the Server Cache with most recent videoID
@@ -53,8 +59,9 @@ func main() {
 
 	// Sets main router and cors settings
 	// This will be secured once im not using localhost
+	csrfMW := csrf.Protect([]byte(cfg.CSRFKey), csrf.Secure(cfg.CSRFSecure))
 	mainRouter := chi.NewRouter()
-	mainRouter.Use(cors.Handler(cors.Options{
+	mainRouter.Use(csrfMW, cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"*"},
@@ -70,6 +77,8 @@ func main() {
 
 	mainRouter.Mount("/v1", v1Router)
 
+	mainRouter.Get("/", controllers.StaticHandler(views.Must(views.ParseFS(templates.FS, "home.gohtml", "layout.gohtml"))))
+
 	// Sets Server Struct
 	srv := &http.Server{
 		Addr:    ":" + port,
@@ -78,7 +87,7 @@ func main() {
 
 	// Youtube calls on an interval to update the Server Cache and DB for API
 	// Uses a go wait group to make a seperate call for each channel
-	const interval = time.Second * 30
+	const interval = time.Minute * 10
 	go youtube.StartYoutubeCalls(*cfg.DB, apiKey, cfg.Cache, interval)
 
 	log.Printf("Serving on port: %s\n", port)

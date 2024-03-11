@@ -13,13 +13,15 @@ outside data for each channel to make a one stop shop space that is always up to
 
 ## Current Technologies Used
 
-Go, Chi, sqlc, PostgreSQL, Goose, HTMX
+Go, Chi, sqlc, PostgreSQL, Goose
 
 ## TODO
 
-Set up main routes to being building the Front-End  
-Setup Front-end using HTMX and Go Templates  
-Add dockerfile & Deploy / Host from my Raspberry Pi  
+Main Prio:
+Add model for passing video info into templates
+Set up routes for region, gens, individuals etc
+
+Low Prio:
 Add an Admin Center for personal commands (I.E. adding and removing channels from the DB)  
 Add user login and auth
 

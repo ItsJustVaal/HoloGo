@@ -16,8 +16,10 @@ type VideoCache struct {
 
 // API Cache
 type ApiConfig struct {
-	DB    *database.Queries
-	Cache VideoCache
+	DB         *database.Queries
+	Cache      VideoCache
+	CSRFKey    string
+	CSRFSecure bool
 }
 
 // Calls the DB for the most recent Video ID for each channel
