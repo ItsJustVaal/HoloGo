@@ -70,3 +70,5 @@ func AddChannelsToDB(db database.Queries) {
 		log.Printf("List of errors: %v\n", errSlice)
 	}
 }
+
+// Move this to a new package so it can be run from the cli

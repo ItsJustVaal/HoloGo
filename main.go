@@ -22,7 +22,7 @@ func main() {
 	godotenv.Load()
 	apiKey := os.Getenv("API_KEY")
 	port := os.Getenv("PORT")
-	dbURL := os.Getenv("DBURL")
+	dbURL := os.Getenv("DB_URL")
 
 	// DB init
 	db, err := sql.Open("postgres", dbURL)
@@ -43,7 +43,6 @@ func main() {
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
-
 
 	// Sets API Config Struct
 	cfg := models.ApiConfig{
@@ -78,9 +77,8 @@ func main() {
 
 	// Youtube calls on an interval to update the Server Cache and DB for API
 	// Uses a go wait group to make a seperate call for each channel
-	const interval = time.Minute * 30
+	const interval = time.Minute * 2
 	go youtube.StartYoutubeCalls(*cfg.DB, apiKey, cfg.Cache, interval)
-
 
 	log.Printf("Serving on port: %s\n", port)
 	log.Fatal(srv.ListenAndServe())

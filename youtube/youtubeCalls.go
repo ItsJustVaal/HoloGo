@@ -19,16 +19,18 @@ import (
 // Sets up the interval and wait group then starts a
 // a routine for each channel call
 func StartYoutubeCalls(db database.Queries, key string, cache models.VideoCache, interval time.Duration) {
-	ticker := time.NewTicker(interval * 60)
+	ticker := time.NewTicker(interval)
 	log.Println("Starting Youtube Calls")
 	for range ticker.C {
 		playlistIDs, err := db.GetPlaylistIDs(context.Background())
 		if err != nil {
 			log.Printf("failed to get playlist ids: %v", err.Error())
 		}
-		
+		log.Printf(playlistIDs[0])
+
 		wg := &sync.WaitGroup{}
 		for _, playlist := range playlistIDs {
+			log.Println("we inside")
 			wg.Add(1)
 			go getVideoDetails(db, key, cache, wg, playlist)
 		}
@@ -40,7 +42,8 @@ func StartYoutubeCalls(db database.Queries, key string, cache models.VideoCache,
 // Gets the most recent video IDs for each channel
 // This uses the least amount of Youtube API call resources
 // as possible
-func getVideoIDs(db database.Queries, key string, playlist string) ([]string, error) {
+func getVideoIDs(key string, playlist string) ([]string, error) {
+	log.Println("vids tho")
 	videoMap := []string{}
 	service, err := youtube.NewService(context.Background(), option.WithAPIKey(key))
 	if err != nil {
@@ -63,7 +66,7 @@ func getVideoDetails(db database.Queries, key string, cache models.VideoCache, w
 
 	// First Call to get most recent video IDs for each channel
 	log.Println("STARTING")
-	videoIDs, err := getVideoIDs(db, key, playlist)
+	videoIDs, err := getVideoIDs(key, playlist)
 	if err != nil {
 		log.Fatalf("Failed to get video IDs: %v", err.Error())
 	}
@@ -88,19 +91,19 @@ func getVideoDetails(db database.Queries, key string, cache models.VideoCache, w
 		if err != nil {
 			log.Fatalf("failed to get video details: %v\n", err.Error())
 		}
-		
+
 		// Checks for nil thumbnail value
 		items := resp.Items[0]
 		if items.Snippet.Thumbnails.Standard == nil {
 			items.Snippet.Thumbnails.Standard = items.Snippet.Thumbnails.High
 		}
-		
+
 		// Converts the published at time
-		timeCnv, err := time.Parse(time.RFC3339,items.Snippet.PublishedAt)
+		timeCnv, err := time.Parse(time.RFC3339, items.Snippet.PublishedAt)
 		if err != nil {
 			log.Println(err.Error())
 		}
-		
+
 		// Runs if the video is not a live stream
 		if items.LiveStreamingDetails == nil {
 			_, err = db.CreateVideo(context.Background(), database.CreateVideoParams{
@@ -112,7 +115,7 @@ func getVideoDetails(db database.Queries, key string, cache models.VideoCache, w
 				Title:              items.Snippet.Title,
 				Description:        items.Snippet.Description,
 				Thumbnail:          items.Snippet.Thumbnails.High.Url,
-				PublishedAt: 		sql.NullTime{Time: timeCnv, Valid: true},
+				PublishedAt:        sql.NullTime{Time: timeCnv, Valid: true},
 				ScheduledStartTime: sql.NullString{String: "None", Valid: true},
 				ActualStartTime:    sql.NullString{String: "None", Valid: true},
 				ActualEndTime:      sql.NullString{String: "None", Valid: true},
@@ -131,7 +134,7 @@ func getVideoDetails(db database.Queries, key string, cache models.VideoCache, w
 				Title:              items.Snippet.Title,
 				Description:        items.Snippet.Description,
 				Thumbnail:          items.Snippet.Thumbnails.High.Url,
-				PublishedAt: 		sql.NullTime{Time: timeCnv, Valid: true},
+				PublishedAt:        sql.NullTime{Time: timeCnv, Valid: true},
 				ScheduledStartTime: sql.NullString{String: items.LiveStreamingDetails.ScheduledStartTime, Valid: true},
 				ActualStartTime:    sql.NullString{String: items.LiveStreamingDetails.ActualStartTime, Valid: true},
 				ActualEndTime:      sql.NullString{String: items.LiveStreamingDetails.ActualEndTime, Valid: true},
@@ -143,9 +146,8 @@ func getVideoDetails(db database.Queries, key string, cache models.VideoCache, w
 	}
 }
 
-
 // This function wont be run unless there are new channels
-// since playlist IDs dont change, will change this into 
+// since playlist IDs dont change, will change this into
 // a proper admin command or a CLI tool
 func GetPlaylists(db database.Queries, key string, cache models.VideoCache) error {
 	// Grab all channel IDs from DB
