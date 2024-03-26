@@ -67,6 +67,47 @@ func (q *Queries) CreateVideo(ctx context.Context, arg CreateVideoParams) (Video
 	return i, err
 }
 
+const getAllVideos = `-- name: GetAllVideos :many
+SELECT id, created_at, updated_at, videoid, playlistid, title, description, thumbnail, published_at, scheduled_start_time, actual_start_time, actual_end_time FROM videos
+ORDER BY published_at DESC
+`
+
+func (q *Queries) GetAllVideos(ctx context.Context) ([]Video, error) {
+	rows, err := q.db.QueryContext(ctx, getAllVideos)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Video
+	for rows.Next() {
+		var i Video
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Videoid,
+			&i.Playlistid,
+			&i.Title,
+			&i.Description,
+			&i.Thumbnail,
+			&i.PublishedAt,
+			&i.ScheduledStartTime,
+			&i.ActualStartTime,
+			&i.ActualEndTime,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getMostRecentVideo = `-- name: GetMostRecentVideo :one
 SELECT videoID FROM videos
 WHERE playlistID = $1

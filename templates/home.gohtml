@@ -1,6 +1,11 @@
 {{ template "header" .}}
 <div class="px-6">
   <!-- Start with testing a range loop of all videos -->
-  <h1 class="py-4 text-4xl semibold tracking-tight"></h1>
+  <h1 class="py-4 text-4xl semibold tracking-tight">Videos</h1>
+  <div class="grid grid-cols-4 gap-4">
+    {{ range . }}
+    <div>Title: {{ .Title }}</div>
+    {{ end }}
+  </div>
 </div>
 {{ template "footer" .}}

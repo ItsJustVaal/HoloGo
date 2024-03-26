@@ -7,3 +7,7 @@ RETURNING *;
 SELECT videoID FROM videos
 WHERE playlistID = $1
 ORDER BY published_at DESC;
+
+-- name: GetAllVideos :many
+SELECT * FROM videos
+ORDER BY published_at DESC;

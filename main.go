@@ -49,6 +49,10 @@ func main() {
 		CSRFSecure: false,
 	}
 
+	vidService := controllers.Vids{
+		DB: *queries,
+	}
+
 	// Sets the Server Cache with most recent videoID
 	// from each channel, if no ID exists, uses zero value
 	log.Println("Setting Cache")
@@ -76,8 +80,9 @@ func main() {
 	v1Router.Get("/err", handleGetErr)
 
 	mainRouter.Mount("/v1", v1Router)
+	vidService.Templates.Main = views.Must(views.ParseFS(templates.FS, "home.gohtml", "layout.gohtml"))
 
-	mainRouter.Get("/", controllers.StaticHandler(views.Must(views.ParseFS(templates.FS, "home.gohtml", "layout.gohtml"))))
+	mainRouter.Get("/", vidService.PopulateHome)
 
 	// Sets Server Struct
 	srv := &http.Server{
