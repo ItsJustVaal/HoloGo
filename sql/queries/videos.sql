@@ -10,4 +10,5 @@ ORDER BY published_at DESC;
 
 -- name: GetAllVideos :many
 SELECT * FROM videos
-ORDER BY published_at DESC;
+ORDER BY published_at DESC
+LIMIT 25;

@@ -4,3 +4,4 @@ data
 *.csv
 node_modules
 *.css
+*.exe~

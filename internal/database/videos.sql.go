@@ -70,6 +70,7 @@ func (q *Queries) CreateVideo(ctx context.Context, arg CreateVideoParams) (Video
 const getAllVideos = `-- name: GetAllVideos :many
 SELECT id, created_at, updated_at, videoid, playlistid, title, description, thumbnail, published_at, scheduled_start_time, actual_start_time, actual_end_time FROM videos
 ORDER BY published_at DESC
+LIMIT 25
 `
 
 func (q *Queries) GetAllVideos(ctx context.Context) ([]Video, error) {

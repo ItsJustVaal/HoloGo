@@ -17,6 +17,7 @@ type VideoTPL struct {
 	Description    string
 	Thumbnail      string
 	ScheduledStart string
+	Schedule       string
 }
 
 // Make funcs to get all videos
@@ -52,14 +53,26 @@ func MainPageRender(db database.Queries) []VideoTPL {
 	}
 
 	for _, video := range dbVideos {
-		tplVideos = append(tplVideos, VideoTPL{
-			VideoID:        video.Videoid,
-			Playlist:       video.Playlistid,
-			Title:          video.Title,
-			Description:    video.Description,
-			Thumbnail:      video.Thumbnail,
-			ScheduledStart: video.ScheduledStartTime.String,
-		})
+		if video.ActualEndTime.String != "" {
+			tplVideos = append(tplVideos, VideoTPL{
+				VideoID:     video.Videoid,
+				Playlist:    video.Playlistid,
+				Title:       video.Title,
+				Description: video.Description,
+				Thumbnail:   video.Thumbnail,
+				Schedule:    "Finished",
+			})
+		} else {
+			tplVideos = append(tplVideos, VideoTPL{
+				VideoID:        video.Videoid,
+				Playlist:       video.Playlistid,
+				Title:          video.Title,
+				Description:    video.Description,
+				Thumbnail:      video.Thumbnail,
+				ScheduledStart: video.ScheduledStartTime.String,
+				Schedule:       "Upcoming",
+			})
+		}
 	}
 	return tplVideos
 }
